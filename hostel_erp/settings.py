@@ -91,15 +91,27 @@ WSGI_APPLICATION = "hostel_erp.wsgi.application"
 #     }
 # }
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'Hostel_erp',
+#         'USER': 'postgres',
+#         'PASSWORD': 'Naga@123',  # replace with your real password
+#         'HOST': 'localhost',
+#         'PORT': '5432',
+#     }
+# }
+
+
+import dj_database_url
+import os
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'Hostel_erp',
-        'USER': 'postgres',
-        'PASSWORD': 'Naga@123',  # replace with your real password
-        'HOST': 'localhost',
-        'PORT': '5432',
-    }
+    'default': dj_database_url.config(
+        default=os.environ.get("postgresql://hostel_user:JxD1HOUHQUdZv5QSwy2piFvjLLPSOV5E@dpg-d4cvqsbipnbc739o9u0g-a/hostel_erp"),
+        conn_max_age=600,
+        ssl_require=True,
+    )
 }
 
 
