@@ -42,6 +42,8 @@ def signup_api(request):
             student_phone_number=data["student_phone_number"],
             father_name=data["father_name"],
             father_phone_number=data["father_phone_number"],
+            student_email=data["student_email"],   # ⭐ ADD THIS
+
             fees_paid=data["fees_paid"],
             pending_fee=data["pending_fee"],
             utr_number=data["utr_number"],
