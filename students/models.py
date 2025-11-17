@@ -14,7 +14,12 @@ class Student(models.Model):
 
     father_name = models.CharField(max_length=100)
     father_phone_number = models.CharField(max_length=15)
-    student_email = models.EmailField(max_length=254, blank=True, null=True)
+    student_email = models.EmailField(
+        max_length=254,
+        blank=True,
+        null=True,
+        unique=True
+    )
 
     fees_paid = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     utr_number = models.CharField(max_length=100, null=True, blank=True)
