@@ -63,8 +63,9 @@ REST_FRAMEWORK = {
 }
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+
     "django.contrib.sessions.middleware.SessionMiddleware",
-    # "whitenoise.middleware.WhiteNoiseMiddleware",
     'corsheaders.middleware.CorsMiddleware',
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -167,8 +168,8 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')   # collectstatic will write here
-# STATICFILES_DIRS = [ os.path.join(BASE_DIR, 'static') ]  # optional: your repo-level static folder
-# STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+STATICFILES_DIRS = [ os.path.join(BASE_DIR, 'static') ]  # optional: your repo-level static folder
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 
 # Default primary key field type
@@ -183,7 +184,7 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = "ballanagababu29@gmail.com"
 EMAIL_HOST_PASSWORD = "beof esdx jvcy yeal"
 
-STATICFILES_STORAGE = 'cloudinary_storage.storage.StaticHashedCloudinaryStorage'
+# STATICFILES_STORAGE = 'cloudinary_storage.storage.StaticHashedCloudinaryStorage'
 
 # MEDIA settings
 MEDIA_URL = '/media/'
