@@ -48,7 +48,9 @@ def signup_api(request):
             pending_fee=data["pending_fee"],
             utr_number=data["utr_number"],
             room_type=data["room_type"],
-            is_verified=False   # ⭐ pending approval
+            is_verified=False ,  # ⭐ pending approval
+            student_image=data.get("student_image", None)   # ⭐ SAVE IMAGE HERE
+
         )
 
         return Response({"message": "Signup successful! Waiting for admin approval."})

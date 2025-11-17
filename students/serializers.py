@@ -23,6 +23,8 @@ class StudentSignupSerializer(serializers.Serializer):
     pending_fee = serializers.DecimalField(max_digits=10, decimal_places=2)
     utr_number = serializers.CharField(required=False, allow_blank=True)
     room_type = serializers.CharField()
+    student_image = serializers.ImageField(required=False, allow_null=True)   # ⭐ ADD THIS
+
 
 class StudentApprovalSerializer(serializers.ModelSerializer):
     class Meta:

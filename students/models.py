@@ -5,6 +5,8 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 from datetime import timedelta
+from cloudinary_storage.storage import MediaCloudinaryStorage
+
 class Student(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
 
@@ -29,7 +31,12 @@ class Student(models.Model):
 
     # ⭐ NEW FIELD
     is_verified = models.BooleanField(default=False)
-
+    student_image = models.ImageField(
+        storage=MediaCloudinaryStorage(),
+        upload_to="student_images/",
+        null=True,
+        blank=True
+    )
     def __str__(self):
         return self.student_name
 

@@ -6,3 +6,5 @@ psycopg2-binary
 dj-database-url
 whitenoise
 django-cors-headers
+python-dotenv
+cloudinary django-cloudinary-storage
