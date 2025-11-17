@@ -111,3 +111,9 @@ def student_dashboard(request):
     student = Student.objects.get(user=request.user)
     serializer = StudentSerializer(student)
     return Response(serializer.data)
+
+
+from django.http import JsonResponse
+
+def test_api(request):
+    return JsonResponse({"message": "API is working!"})
