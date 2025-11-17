@@ -2,7 +2,6 @@
 
 from django.db import migrations, models
 
-
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -10,12 +9,8 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name="student",
-            name="student_email",
-            field=models.EmailField(
-                default="babuballa90@gmail.comexit", max_length=254, unique=True
-            ),
-            preserve_default=False,
+        migrations.RunSQL(
+            sql="SELECT 1;",
+            reverse_sql="SELECT 1;"
         ),
     ]
