@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("students", "0003_student_student_email"),
+    ("students", "0002_student_is_verified_alter_student_room_type"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
