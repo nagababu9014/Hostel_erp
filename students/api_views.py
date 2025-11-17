@@ -13,8 +13,10 @@ from .serializers import (
     StudentApprovalSerializer,
 )
 
-from .models import Student
-
+from .models import Student , PasswordResetOTP
+import random
+from django.core.mail import send_mail
+from django.contrib.auth.hashers import make_password
 # SIGNUP API (stored as pending)
 
 @api_view(["POST"])
@@ -27,7 +29,9 @@ def signup_api(request):
         # create user
         user = User.objects.create_user(
             username=data["username"],
-            password=data["password"]
+            password=data["password"],
+            email=data["student_email"]     # ⭐ SAVE EMAIL HERE
+
         )
 
         # create student profile
@@ -48,6 +52,70 @@ def signup_api(request):
         return Response({"message": "Signup successful! Waiting for admin approval."})
 
     return Response(serializer.errors, status=400)
+
+@api_view(["POST"])
+def forgot_password(request):
+    username = request.data.get("username")
+
+    try:
+        user = User.objects.get(username=username)
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=404)
+
+    # Automatically fetch registered email
+    email = user.student.student_email
+
+    if not email:
+        return Response({"error": "No email linked with this account"}, status=400)
+
+    # Generate 6-digit OTP
+    otp = str(random.randint(100000, 999999))
+
+    # Save OTP in DB
+    PasswordResetOTP.objects.create(user=user, otp=otp)
+
+    # Send OTP email
+    send_mail(
+        subject="Hostel ERP - Password Reset OTP",
+        message=f"Your OTP to reset password is: {otp}\n\nValid for 15 minutes.",
+        from_email="ballanagababu29@gmail.com",
+        recipient_list=[email],
+        fail_silently=False,
+    )
+
+    return Response({"message": "OTP sent to your registered email"})
+
+@api_view(["POST"])
+def reset_password(request):
+    username = request.data.get("username")
+    otp = request.data.get("otp")
+    new_password = request.data.get("new_password")
+
+    # get user
+    try:
+        user = User.objects.get(username=username)
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=404)
+
+    # get OTP entry
+    try:
+        otp_obj = PasswordResetOTP.objects.filter(user=user, otp=otp).latest('created_at')
+    except PasswordResetOTP.DoesNotExist:
+        return Response({"error": "Invalid OTP"}, status=400)
+
+    # check expiration
+    if otp_obj.is_expired():
+        return Response({"error": "OTP expired"}, status=400)
+
+    # update password
+    user.password = make_password(new_password)
+    user.save()
+
+    # clear otp history
+    PasswordResetOTP.objects.filter(user=user).delete()
+
+    return Response({"message": "Password reset successful"})
+
 
 # ADMIN APPROVE API
 @api_view(["PATCH"])

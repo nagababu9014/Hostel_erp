@@ -3,6 +3,8 @@ from django.db import models
 # Create your models here.
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
+from datetime import timedelta
 class Student(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
 
@@ -12,6 +14,7 @@ class Student(models.Model):
 
     father_name = models.CharField(max_length=100)
     father_phone_number = models.CharField(max_length=15)
+    student_email = models.EmailField(unique=True)   # ⭐ ADD THIS
 
     fees_paid = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     utr_number = models.CharField(max_length=100, null=True, blank=True)
@@ -25,3 +28,10 @@ class Student(models.Model):
     def __str__(self):
         return self.student_name
 
+class PasswordResetOTP(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    otp = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def is_expired(self):
+        return timezone.now() > self.created_at + timedelta(minutes=15)

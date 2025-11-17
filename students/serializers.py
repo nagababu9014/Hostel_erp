@@ -17,6 +17,8 @@ class StudentSignupSerializer(serializers.Serializer):
     student_phone_number = serializers.CharField()
     father_name = serializers.CharField()
     father_phone_number = serializers.CharField()
+    student_email = serializers.EmailField()   # ⭐ ADD THIS
+
     fees_paid = serializers.DecimalField(max_digits=10, decimal_places=2)
     pending_fee = serializers.DecimalField(max_digits=10, decimal_places=2)
     utr_number = serializers.CharField(required=False, allow_blank=True)
