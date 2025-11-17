@@ -7,4 +7,6 @@ dj-database-url
 whitenoise
 django-cors-headers
 python-dotenv
-cloudinary django-cloudinary-storage
+cloudinary 
+django-cloudinary-storage
+pillow
