@@ -68,3 +68,28 @@ class StaffRole(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.role}"
+
+
+class DailyMeal(models.Model):
+    student = models.ForeignKey("Student", on_delete=models.CASCADE)
+    date = models.DateField(default=timezone.now)
+    qr_token = models.CharField(max_length=255, unique=True)
+
+    # Decision flags
+    breakfast = models.BooleanField(null=True, blank=True)
+    lunch = models.BooleanField(null=True, blank=True)
+    dinner = models.BooleanField(null=True, blank=True)
+
+    # Scan flags
+    breakfast_scanned = models.BooleanField(default=False)
+    lunch_scanned = models.BooleanField(default=False)
+    dinner_scanned = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('student', 'date')
+
+    def __str__(self):
+        return f"{self.student.student_name} - {self.date}"

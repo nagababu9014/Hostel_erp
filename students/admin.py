@@ -55,10 +55,36 @@ class StudentAdmin(admin.ModelAdmin):
 
 
 from django.contrib import admin
-from .models import StaffRole
+from .models import StaffRole, DailyMeal
 
 @admin.register(StaffRole)
 class StaffRoleAdmin(admin.ModelAdmin):
     list_display = ("user", "role")
     list_filter = ("role",)
     search_fields = ("user__username",)
+
+
+@admin.register(DailyMeal)
+class DailyMealAdmin(admin.ModelAdmin):
+    list_display = (
+        "student",
+        "date",
+        "qr_token",
+        "breakfast",
+        "lunch",
+        "dinner",
+        "breakfast_scanned",
+        "lunch_scanned",
+        "dinner_scanned",
+    )
+    list_filter = ("date",)
+    search_fields = ("student__student_name", "qr_token")
+
+    def breakfast_scanned(self, obj):
+        return obj.breakfast
+
+    def lunch_scanned(self, obj):
+        return obj.lunch
+
+    def dinner_scanned(self, obj):
+        return obj.dinner

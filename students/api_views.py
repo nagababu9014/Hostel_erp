@@ -275,3 +275,221 @@ class OfficeDeleteStudentAPI(APIView):
 
         student.delete()
         return Response({"message": "Student deleted successfully"})
+    
+
+import uuid
+from django.utils import timezone
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from .models import DailyMeal, Student
+from .decorators import role_required
+from .serializers import DailyMealSerializer, StudentSerializer
+from django.conf import settings
+from datetime import time as dtime
+
+# Helper to get meal time ranges from settings or fallback defaults
+MEAL_RANGES = getattr(settings, "MEAL_TIME_RANGES", {
+    "breakfast": {"start": dtime(7, 0), "end": dtime(10, 0)},
+    "lunch": {"start": dtime(12, 0), "end": dtime(15, 0)},
+    "dinner": {"start": dtime(19, 0), "end": dtime(21, 0)},
+})
+
+def is_within_meal_window(meal_type, now=None):
+    if now is None:
+        now = timezone.localtime().time()
+    rng = MEAL_RANGES.get(meal_type)
+    if not rng:
+        return False
+    start = rng["start"]
+    end = rng["end"]
+    # simple inclusive check (works if start < end)
+    return start <= now <= end
+
+# -------------------------
+# STEP: Generate Daily QRs
+# -------------------------
+class GenerateDailyQR(APIView):
+    @role_required(['owner', 'office','warden'])
+    def post(self, request):
+        today = timezone.now().date()
+        students = Student.objects.filter(is_verified=True)
+        created = 0
+        for student in students:
+            token = str(uuid.uuid4())
+            obj, _ = DailyMeal.objects.update_or_create(
+                student=student,
+                date=today,
+                defaults={"qr_token": token}
+            )
+            created += 1
+        return Response({"message": f"Daily QRs generated for {created} students"})
+
+# -------------------------
+# STEP: Student view own QR
+# -------------------------
+class StudentQRView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        try:
+            student = Student.objects.get(user=request.user)
+        except Student.DoesNotExist:
+            return Response({"error":"Student profile not found"}, status=404)
+
+        today = timezone.now().date()
+        try:
+            meal = DailyMeal.objects.get(student=student, date=today)
+        except DailyMeal.DoesNotExist:
+            return Response({"error":"No QR generated for today"}, status=404)
+
+        return Response({
+            "qr_token": meal.qr_token,
+            "date": str(meal.date)
+        })
+
+# -------------------------
+# STEP: Scan QR (show status + image)
+# -------------------------
+class ScanQRAPIView(APIView):
+    @role_required(['warden', 'owner', 'office'])  # optional: add office
+    def post(self, request):
+        token = request.data.get("qr_token")
+
+        if not token:
+            return Response({"error": "qr_token required"}, status=400)
+
+        try:
+            meal = DailyMeal.objects.get(
+                qr_token=token,
+                date=timezone.now().date()  # must be today's QR
+            )
+        except DailyMeal.DoesNotExist:
+            return Response({"error": "Invalid or expired QR"}, status=404)
+
+        student = meal.student
+
+        return Response({
+            "student_id": student.id,
+            "student_name": student.student_name,
+            "et_number": student.et_number,
+            "student_image": student.student_image.url if student.student_image else None,
+
+            "breakfast": meal.breakfast,
+            "lunch": meal.lunch,
+            "dinner": meal.dinner,
+
+            "breakfast_scanned": meal.breakfast_scanned,
+            "lunch_scanned": meal.lunch_scanned,
+            "dinner_scanned": meal.dinner_scanned,
+        })
+
+# -------------------------
+# STEP: Breakfast-time decision (set lunch/dinner yes/no)
+# Only usable during breakfast window
+# -------------------------
+class UpdateMealDecision(APIView):
+    @role_required(['warden','owner'])
+    def post(self, request):
+        token = request.data.get("qr_token")
+        meal_type = request.data.get("meal")   # 'lunch' or 'dinner'
+        value = request.data.get("value")      # True/False
+
+        if meal_type not in ('lunch','dinner'):
+            return Response({"error":"meal must be 'lunch' or 'dinner' at breakfast time"}, status=400)
+
+        # ensure we're in breakfast window
+        if not is_within_meal_window("breakfast"):
+            return Response({"error":"This decision can only be recorded during breakfast time"}, status=403)
+
+        try:
+            meal = DailyMeal.objects.get(qr_token=token, date=timezone.now().date())
+        except DailyMeal.DoesNotExist:
+            return Response({"error":"Invalid QR"}, status=404)
+
+        # convert value to boolean properly
+        if isinstance(value, str):
+            value = value.lower() in ("true","1","yes")
+        elif value is None:
+            return Response({"error":"value is required True/False"}, status=400)
+
+        if meal_type == "lunch":
+            meal.lunch = bool(value)
+        else:
+            meal.dinner = bool(value)
+
+        meal.save()
+        return Response({"message": f"{meal_type} decision saved", "lunch": meal.lunch, "dinner": meal.dinner})
+
+# -------------------------
+# STEP: Scan Meal (breakfast/lunch/dinner)
+# Enforces: time windows, no duplicates, no scan if opted NO
+# -------------------------
+class ScanMealAPIView(APIView):
+    @role_required(['warden','owner'])
+    def post(self, request):
+        token = request.data.get("qr_token")
+        meal_type = request.data.get("meal_type")  # breakfast/lunch/dinner
+
+        if meal_type not in ("breakfast","lunch","dinner"):
+            return Response({"error":"meal_type must be 'breakfast','lunch' or 'dinner'."}, status=400)
+
+        # check time window
+        if not is_within_meal_window(meal_type):
+            return Response({"error": f"Not within {meal_type} time window"}, status=403)
+
+        try:
+            meal = DailyMeal.objects.get(qr_token=token, date=timezone.now().date())
+        except DailyMeal.DoesNotExist:
+            return Response({"error":"Invalid or expired QR"}, status=404)
+
+        # checks and logic
+        if meal_type == "breakfast":
+            if meal.breakfast_scanned:
+                return Response({"error":"Already scanned breakfast"}, status=400)
+            # mark breakfast scanned. Optionally set breakfast True
+            meal.breakfast_scanned = True
+            # if breakfast field is None, consider True (present)
+            if meal.breakfast is None:
+                meal.breakfast = True
+
+        if meal_type == "lunch":
+            # lunch decision must be True or None? Business rule: if None, treat as True by default
+            if meal.lunch is False:
+                return Response({"error":"Student opted NO for lunch"}, status=400)
+            if meal.lunch_scanned:
+                return Response({"error":"Already scanned lunch"}, status=400)
+            meal.lunch_scanned = True
+            if meal.lunch is None:
+                meal.lunch = True
+
+        if meal_type == "dinner":
+            if meal.dinner is False:
+                return Response({"error":"Student opted NO for dinner"}, status=400)
+            if meal.dinner_scanned:
+                return Response({"error":"Already scanned dinner"}, status=400)
+            meal.dinner_scanned = True
+            if meal.dinner is None:
+                meal.dinner = True
+
+        meal.save()
+        return Response({"message": f"{meal_type} scan completed"})
+
+# -------------------------
+# STEP: Kitchen counts API
+# -------------------------
+class KitchenCountAPI(APIView):
+    @role_required(['kitchen','owner'])
+    def get(self, request):
+        today = timezone.now().date()
+        # breakfast: count who scanned breakfast (present)
+        breakfast_count = DailyMeal.objects.filter(date=today, breakfast_scanned=True).count()
+        # lunch: count who opted True (or None treated as True) and are verified students
+        lunch_count = DailyMeal.objects.filter(date=today).exclude(lunch=False).count()
+        # dinner similar
+        dinner_count = DailyMeal.objects.filter(date=today).exclude(dinner=False).count()
+
+        return Response({
+            "breakfast_count": breakfast_count,
+            "lunch_count": lunch_count,
+            "dinner_count": dinner_count
+        })

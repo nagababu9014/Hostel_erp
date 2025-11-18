@@ -18,3 +18,13 @@ def role_required(allowed_roles):
 
         return wrapper
     return decorator
+
+def _find_request_arg(args, kwargs):
+    # find the DRF request instance in args or kwargs
+    for a in args:
+        # DRF Request has attributes: user & method & data
+        if hasattr(a, "user") and hasattr(a, "method"):
+            return a
+    if 'request' in kwargs:
+        return kwargs['request']
+    return None

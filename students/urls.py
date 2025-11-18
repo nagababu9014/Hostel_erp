@@ -5,6 +5,12 @@ from .api_views import (
     OfficeEditStudentAPI,
     OfficeApproveStudentAPI,
     OfficeDeleteStudentAPI,
+    GenerateDailyQR,
+    StudentQRView,
+    ScanQRAPIView,
+    UpdateMealDecision,
+    ScanMealAPIView,
+    KitchenCountAPI,
 )
 
 urlpatterns = [
@@ -18,8 +24,15 @@ urlpatterns = [
 
 
     path("office/dashboard/", OfficeDashboardAPI.as_view()),
-
     path("office/student/edit/<int:student_id>/", OfficeEditStudentAPI.as_view()),
     path("office/student/approve/<int:student_id>/", OfficeApproveStudentAPI.as_view()),
     path("office/student/delete/<int:student_id>/", OfficeDeleteStudentAPI.as_view()),
+
+
+     path("generate-daily-qr/", GenerateDailyQR.as_view()),
+    path("student/qr/", StudentQRView.as_view()),
+    path("scan/qr/", ScanQRAPIView.as_view()),
+    path("meal/decision/", UpdateMealDecision.as_view()),
+    path("meal/scan/", ScanMealAPIView.as_view()),
+    path("kitchen/count/", KitchenCountAPI.as_view()),
 ]

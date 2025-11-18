@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import Student
+from .models import Student, DailyMeal
 
 class StudentSerializer(serializers.ModelSerializer):
     class Meta:
@@ -30,3 +30,8 @@ class StudentApprovalSerializer(serializers.ModelSerializer):
     class Meta:
         model = Student
         fields = ["is_verified"]
+
+class DailyMealSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DailyMeal
+        fields = "__all__"

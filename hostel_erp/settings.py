@@ -203,3 +203,12 @@ cloudinary.config(
     api_key=os.getenv("CLOUDINARY_API_KEY"),
     api_secret=os.getenv("CLOUDINARY_API_SECRET")
 )
+
+# in settings.py
+from datetime import time as dtime
+
+MEAL_TIME_RANGES = {
+    "breakfast": {"start": dtime(7,0), "end": dtime(10,0)},
+    "lunch":     {"start": dtime(12,0), "end": dtime(15,0)},
+    "dinner":    {"start": dtime(19,0), "end": dtime(21,0)},
+}
