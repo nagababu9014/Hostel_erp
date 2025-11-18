@@ -119,7 +119,7 @@ WSGI_APPLICATION = "hostel_erp.wsgi.application"
 #     }
 # }
 
-# This created for deployment purpose in render 
+# # This created for deployment purpose in render 
 import dj_database_url
 import os
 

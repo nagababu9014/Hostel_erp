@@ -1,7 +1,7 @@
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
-
+from rest_framework import status
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 
@@ -13,7 +13,7 @@ from .serializers import (
     StudentApprovalSerializer,
 )
 
-from .models import Student , PasswordResetOTP
+from .models import Student , PasswordResetOTP,StaffRole
 import random
 from django.core.mail import send_mail
 from django.contrib.auth.hashers import make_password
@@ -136,7 +136,6 @@ def approve_student(request, student_id):
         return Response({"message": "Student approved successfully"})
     
     return Response(serializer.errors, status=400)
-
 @api_view(["POST"])
 def verified_login(request):
     username = request.data.get("username")
@@ -147,9 +146,10 @@ def verified_login(request):
     if not user:
         return Response({"error": "Invalid username or password"}, status=400)
 
-    # ⭐ If user is admin (superuser or staff)
+    refresh = RefreshToken.for_user(user)
+
+    # ✔ 1. Admin login
     if user.is_superuser or user.is_staff:
-        refresh = RefreshToken.for_user(user)
         return Response({
             "message": "Admin login successful",
             "role": "admin",
@@ -157,18 +157,28 @@ def verified_login(request):
             "refresh": str(refresh)
         })
 
-    # ⭐ Otherwise it is a student login — check student profile
+    # ✔ 2. Check StaffRole (office, warden, accounts, kitchen)
+    try:
+        staff_role = StaffRole.objects.get(user=user)
+        return Response({
+            "message": "Staff login successful",
+            "role": staff_role.role,
+            "access": str(refresh.access_token),
+            "refresh": str(refresh)
+        })
+    except StaffRole.DoesNotExist:
+        pass  # Continue to student check
+
+    # ✔ 3. Student login
     try:
         student = Student.objects.get(user=user)
     except Student.DoesNotExist:
         return Response({"error": "Student profile not found"}, status=404)
 
-    # ⭐ Student must be verified by admin
+    # student must be approved
     if not student.is_verified:
         return Response({"error": "Your account is not yet approved by admin"}, status=403)
 
-    # ⭐ Student login success
-    refresh = RefreshToken.for_user(user)
     return Response({
         "message": "Student login successful",
         "role": "student",
@@ -189,3 +199,79 @@ from django.http import JsonResponse
 
 def test_api(request):
     return JsonResponse({"message": "API is working!"})
+
+
+
+from rest_framework.views import APIView
+from .decorators import role_required
+class OfficeDashboardAPI(APIView):
+
+    @role_required(['owner', 'office'])
+    def get(self, request):
+
+        all_students = Student.objects.all().values(
+            "id", "student_name", "et_number", "student_phone_number",
+            "father_name", "father_phone_number",
+            "student_email", "room_type", "is_verified"
+        )
+
+        pending_students = Student.objects.filter(is_verified=False).values(
+            "id", "student_name", "et_number", "student_phone_number"
+        )
+
+        return Response({
+            "students": list(all_students),
+            "pending_verification": list(pending_students)
+        })
+
+class OfficeEditStudentAPI(APIView):
+
+    @role_required(['owner', 'office'])
+    def put(self, request, student_id):
+        try:
+            student = Student.objects.get(id=student_id)
+        except Student.DoesNotExist:
+            return Response({"error": "Student not found"}, status=404)
+
+        allowed_fields = [
+            "student_name",
+            "student_phone_number",
+            "father_name",
+            "father_phone_number",
+            "student_email",
+            "room_type",
+        ]
+
+        for field in allowed_fields:
+            if field in request.data:
+                setattr(student, field, request.data[field])
+
+        student.save()
+        return Response({"message": "Student updated successfully"})
+
+
+class OfficeApproveStudentAPI(APIView):
+
+    @role_required(['owner', 'office'])
+    def post(self, request, student_id):
+        try:
+            student = Student.objects.get(id=student_id)
+        except Student.DoesNotExist:
+            return Response({"error": "Student not found"}, status=404)
+
+        student.is_verified = True
+        student.save()
+
+        return Response({"message": "Student approved successfully"})
+
+class OfficeDeleteStudentAPI(APIView):
+
+    @role_required(['owner', 'office'])
+    def delete(self, request, student_id):
+        try:
+            student = Student.objects.get(id=student_id)
+        except Student.DoesNotExist:
+            return Response({"error": "Student not found"}, status=404)
+
+        student.delete()
+        return Response({"message": "Student deleted successfully"})

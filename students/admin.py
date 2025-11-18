@@ -52,3 +52,13 @@ class StudentAdmin(admin.ModelAdmin):
         return "No Image"
 
     image_preview.short_description = "Photo"
+
+
+from django.contrib import admin
+from .models import StaffRole
+
+@admin.register(StaffRole)
+class StaffRoleAdmin(admin.ModelAdmin):
+    list_display = ("user", "role")
+    list_filter = ("role",)
+    search_fields = ("user__username",)

@@ -47,3 +47,24 @@ class PasswordResetOTP(models.Model):
 
     def is_expired(self):
         return timezone.now() > self.created_at + timedelta(minutes=15)
+    
+
+
+
+from django.db import models
+from django.contrib.auth.models import User
+
+class StaffRole(models.Model):
+    ROLE_CHOICES = [
+        ('owner', 'Owner'),
+        ('office', 'Office Staff'),
+        ('accounts', 'Accounts'),
+        ('warden', 'Warden'),
+        ('kitchen', 'Kitchen'),
+    ]
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.role}"
