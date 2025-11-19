@@ -210,13 +210,13 @@ class OfficeDashboardAPI(APIView):
     def get(self, request):
 
         all_students = Student.objects.all().values(
-            "id", "student_name", "et_number", "student_phone_number",
+            "id", "student_name", "et_number", "student_phone_number","student_image",
             "father_name", "father_phone_number",
             "student_email", "room_type", "is_verified"
         )
 
         pending_students = Student.objects.filter(is_verified=False).values(
-            "id", "student_name", "et_number", "student_phone_number"
+            "id", "student_name", "et_number", "student_phone_number","student_image"
         )
 
         return Response({

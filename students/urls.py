@@ -17,7 +17,6 @@ urlpatterns = [
     path("signup/", signup_api),
     path("login/", verified_login),
     path("dashboard/", student_dashboard),
-    path("admin/approve/<int:student_id>/", approve_student),
     path("test/", test_api),
     path("forgot-password/", forgot_password),
     path("reset-password/", reset_password),
@@ -29,7 +28,7 @@ urlpatterns = [
     path("office/student/delete/<int:student_id>/", OfficeDeleteStudentAPI.as_view()),
 
 
-     path("generate-daily-qr/", GenerateDailyQR.as_view()),
+    path("generate-daily-qr/", GenerateDailyQR.as_view()),
     path("student/qr/", StudentQRView.as_view()),
     path("scan/qr/", ScanQRAPIView.as_view()),
     path("meal/decision/", UpdateMealDecision.as_view()),
