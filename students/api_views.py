@@ -290,7 +290,7 @@ from datetime import time as dtime
 
 # Helper to get meal time ranges from settings or fallback defaults
 MEAL_RANGES = getattr(settings, "MEAL_TIME_RANGES", {
-    "breakfast": {"start": dtime(7, 0), "end": dtime(10, 0)},
+    "breakfast": {"start": dtime(7, 0), "end": dtime(10, 30)},
     "lunch": {"start": dtime(12, 0), "end": dtime(15, 0)},
     "dinner": {"start": dtime(19, 0), "end": dtime(21, 0)},
 })
@@ -387,92 +387,90 @@ class ScanQRAPIView(APIView):
 # STEP: Breakfast-time decision (set lunch/dinner yes/no)
 # Only usable during breakfast window
 # -------------------------
-class UpdateMealDecision(APIView):
-    @role_required(['warden','owner'])
+class MealActionAPIView(APIView):
+    @role_required(['warden', 'owner'])
     def post(self, request):
-        token = request.data.get("qr_token")
-        meal_type = request.data.get("meal")   # 'lunch' or 'dinner'
-        value = request.data.get("value")      # True/False
+        qr = request.data.get("qr_token")
+        action = request.data.get("action")  # breakfast/lunch/dinner
 
-        if meal_type not in ('lunch','dinner'):
-            return Response({"error":"meal must be 'lunch' or 'dinner' at breakfast time"}, status=400)
-
-        # ensure we're in breakfast window
-        if not is_within_meal_window("breakfast"):
-            return Response({"error":"This decision can only be recorded during breakfast time"}, status=403)
+        if action not in ("breakfast", "lunch", "dinner"):
+            return Response({"error": "action must be breakfast/lunch/dinner"}, status=400)
 
         try:
-            meal = DailyMeal.objects.get(qr_token=token, date=timezone.now().date())
+            meal = DailyMeal.objects.get(qr_token=qr, date=timezone.now().date())
         except DailyMeal.DoesNotExist:
-            return Response({"error":"Invalid QR"}, status=404)
+            return Response({"error": "Invalid QR"}, status=404)
 
-        # convert value to boolean properly
-        if isinstance(value, str):
-            value = value.lower() in ("true","1","yes")
-        elif value is None:
-            return Response({"error":"value is required True/False"}, status=400)
+        # CURRENT TIME WINDOW
+        now_window = None
+        for m in ("breakfast","lunch","dinner"):
+            if is_within_meal_window(m):
+                now_window = m
+                break
 
-        if meal_type == "lunch":
-            meal.lunch = bool(value)
-        else:
-            meal.dinner = bool(value)
-
-        meal.save()
-        return Response({"message": f"{meal_type} decision saved", "lunch": meal.lunch, "dinner": meal.dinner})
-
-# -------------------------
-# STEP: Scan Meal (breakfast/lunch/dinner)
-# Enforces: time windows, no duplicates, no scan if opted NO
-# -------------------------
-class ScanMealAPIView(APIView):
-    @role_required(['warden','owner'])
-    def post(self, request):
-        token = request.data.get("qr_token")
-        meal_type = request.data.get("meal_type")  # breakfast/lunch/dinner
-
-        if meal_type not in ("breakfast","lunch","dinner"):
-            return Response({"error":"meal_type must be 'breakfast','lunch' or 'dinner'."}, status=400)
-
-        # check time window
-        if not is_within_meal_window(meal_type):
-            return Response({"error": f"Not within {meal_type} time window"}, status=403)
-
-        try:
-            meal = DailyMeal.objects.get(qr_token=token, date=timezone.now().date())
-        except DailyMeal.DoesNotExist:
-            return Response({"error":"Invalid or expired QR"}, status=404)
-
-        # checks and logic
-        if meal_type == "breakfast":
+        # --------------------------------------------------------
+        # CASE 1: BREAKFAST BUTTON
+        # --------------------------------------------------------
+        if action == "breakfast":
             if meal.breakfast_scanned:
-                return Response({"error":"Already scanned breakfast"}, status=400)
-            # mark breakfast scanned. Optionally set breakfast True
+                return Response({"error": "Breakfast already scanned"}, status=400)
+
             meal.breakfast_scanned = True
-            # if breakfast field is None, consider True (present)
             if meal.breakfast is None:
                 meal.breakfast = True
 
-        if meal_type == "lunch":
-            # lunch decision must be True or None? Business rule: if None, treat as True by default
-            if meal.lunch is False:
-                return Response({"error":"Student opted NO for lunch"}, status=400)
-            if meal.lunch_scanned:
-                return Response({"error":"Already scanned lunch"}, status=400)
-            meal.lunch_scanned = True
-            if meal.lunch is None:
-                meal.lunch = True
+            meal.save()
+            return Response({"message": "Breakfast marked done"})
 
-        if meal_type == "dinner":
-            if meal.dinner is False:
-                return Response({"error":"Student opted NO for dinner"}, status=400)
-            if meal.dinner_scanned:
-                return Response({"error":"Already scanned dinner"}, status=400)
-            meal.dinner_scanned = True
-            if meal.dinner is None:
-                meal.dinner = True
+        # --------------------------------------------------------
+        # CASE 2: LUNCH BUTTON
+        # --------------------------------------------------------
+        if action == "lunch":
+            # Morning time (breakfast window) → decision
+            if now_window == "breakfast":
+                meal.lunch = False
+                meal.save()
+                return Response({"message": "Lunch opted NO (count reduced)"})
 
-        meal.save()
-        return Response({"message": f"{meal_type} scan completed"})
+            # Afternoon time → scan
+            if now_window == "lunch":
+                if meal.lunch is False:
+                    return Response({"error": "Student opted NO for lunch"}, status=400)
+                if meal.lunch_scanned:
+                    return Response({"error": "Lunch already scanned"}, status=400)
+
+                meal.lunch_scanned = True
+                if meal.lunch is None:
+                    meal.lunch = True
+                meal.save()
+                return Response({"message": "Lunch scan completed"})
+
+            return Response({"error": "Cannot update lunch at this time"}, status=403)
+
+        # --------------------------------------------------------
+        # CASE 3: DINNER BUTTON
+        # --------------------------------------------------------
+        if action == "dinner":
+            # Morning time → dinner decision
+            if now_window == "breakfast":
+                meal.dinner = False
+                meal.save()
+                return Response({"message": "Dinner opted NO (count reduced)"})
+
+            # Evening → scan dinner
+            if now_window == "dinner":
+                if meal.dinner is False:
+                    return Response({"error": "Student opted NO for dinner"}, status=400)
+                if meal.dinner_scanned:
+                    return Response({"error": "Dinner already scanned"}, status=400)
+
+                meal.dinner_scanned = True
+                if meal.dinner is None:
+                    meal.dinner = True
+                meal.save()
+                return Response({"message": "Dinner scan completed"})
+
+            return Response({"error": "Cannot update dinner at this time"}, status=403)
 
 # -------------------------
 # STEP: Kitchen counts API

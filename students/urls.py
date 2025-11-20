@@ -8,9 +8,8 @@ from .api_views import (
     GenerateDailyQR,
     StudentQRView,
     ScanQRAPIView,
-    UpdateMealDecision,
-    ScanMealAPIView,
     KitchenCountAPI,
+    MealActionAPIView,
 )
 
 urlpatterns = [
@@ -31,7 +30,7 @@ urlpatterns = [
     path("generate-daily-qr/", GenerateDailyQR.as_view()),
     path("student/qr/", StudentQRView.as_view()),
     path("scan/qr/", ScanQRAPIView.as_view()),
-    path("meal/decision/", UpdateMealDecision.as_view()),
-    path("meal/scan/", ScanMealAPIView.as_view()),
+    path("meal/action/", MealActionAPIView.as_view()),
+
     path("kitchen/count/", KitchenCountAPI.as_view()),
 ]
