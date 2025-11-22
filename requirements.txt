@@ -10,3 +10,5 @@ python-dotenv
 cloudinary 
 django-cloudinary-storage
 pillow
+django-apscheduler
+celery django-celery-beat redis
