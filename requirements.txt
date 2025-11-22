@@ -11,4 +11,6 @@ cloudinary
 django-cloudinary-storage
 pillow
 django-apscheduler
-celery django-celery-beat redis
+celery 
+django-celery-beat 
+redis
