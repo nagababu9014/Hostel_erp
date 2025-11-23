@@ -209,21 +209,30 @@ class OfficeDashboardAPI(APIView):
     @role_required(['owner', 'office'])
     def get(self, request):
 
-        all_students = Student.objects.all().values(
-            "id", "student_name", "et_number", "student_phone_number","student_image",
-            "father_name", "father_phone_number",
-            "student_email", "room_type", "is_verified"
-        )
+        students = Student.objects.all()
+        pending_students = Student.objects.filter(is_verified=False)
 
-        pending_students = Student.objects.filter(is_verified=False).values(
-            "id", "student_name", "et_number", "student_phone_number","student_image"
-        )
+        def format_students(queryset):
+            data = []
+            for student in queryset:
+                data.append({
+                    "id": student.id,
+                    "student_name": student.student_name,
+                    "et_number": student.et_number,
+                    "student_phone_number": student.student_phone_number,
+                    "student_image": request.build_absolute_uri(student.student_image.url) if student.student_image else None,
+                    "father_name": student.father_name,
+                    "father_phone_number": student.father_phone_number,
+                    "student_email": student.student_email,
+                    "room_type": student.room_type,
+                    "is_verified": student.is_verified,
+                })
+            return data
 
         return Response({
-            "students": list(all_students),
-            "pending_verification": list(pending_students)
+            "students": format_students(students),
+            "pending_verification": format_students(pending_students)
         })
-
 class OfficeEditStudentAPI(APIView):
 
     @role_required(['owner', 'office'])
