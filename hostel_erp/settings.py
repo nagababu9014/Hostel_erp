@@ -215,3 +215,13 @@ MEAL_TIME_RANGES = {
     "lunch":     {"start": dtime(14,0), "end": dtime(15,0)},
     "dinner":    {"start": dtime(18,0), "end": dtime(21,0)},
 }
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),   # ✅ 1 hour access token
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),   # optional
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
