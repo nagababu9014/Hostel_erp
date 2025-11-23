@@ -290,7 +290,7 @@ from datetime import time as dtime
 
 # Helper to get meal time ranges from settings or fallback defaults
 MEAL_RANGES = getattr(settings, "MEAL_TIME_RANGES", {
-    "breakfast": {"start": dtime(7, 0), "end": dtime(10, 30)},
+    "breakfast": {"start": dtime(7, 0), "end": dtime(12, 30)},
     "lunch": {"start": dtime(12, 0), "end": dtime(15, 0)},
     "dinner": {"start": dtime(19, 0), "end": dtime(21, 0)},
 })
