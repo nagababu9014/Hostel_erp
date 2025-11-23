@@ -412,16 +412,23 @@ class ScanQRAPIView(APIView):
             "lunch_scanned": meal.lunch_scanned,
             "dinner_scanned": meal.dinner_scanned,
         })
+from datetime import datetime
 
-# -------------------------
-# STEP: Breakfast-time decision (set lunch/dinner yes/no)
-# Only usable during breakfast window
-# -------------------------
+def get_now_window():
+    now = datetime.now().time()  # Force local machine time
+
+    for meal, rng in MEAL_RANGES.items():
+        start = rng["start"]
+        end = rng["end"]
+        if start <= now <= end:
+            return meal
+    return None
+
 class MealActionAPIView(APIView):
     @role_required(['warden', 'owner'])
     def post(self, request):
         qr = request.data.get("qr_token")
-        action = request.data.get("action")  # breakfast/lunch/dinner
+        action = request.data.get("action")
 
         if action not in ("breakfast", "lunch", "dinner"):
             return Response({"error": "action must be breakfast/lunch/dinner"}, status=400)
@@ -431,16 +438,14 @@ class MealActionAPIView(APIView):
         except DailyMeal.DoesNotExist:
             return Response({"error": "Invalid QR"}, status=404)
 
-        # CURRENT TIME WINDOW
-        now_window = None
-        for m in ("breakfast","lunch","dinner"):
-            if is_within_meal_window(m):
-                now_window = m
-                break
+        # ✅ CLEAN WINDOW CHECK
+        now_window = get_now_window()
 
-        # --------------------------------------------------------
-        # CASE 1: BREAKFAST BUTTON
-        # --------------------------------------------------------
+        # DEBUG (optional - remove later)
+        print("TIME:", timezone.localtime().time())
+        print("WINDOW:", now_window)
+
+        # ---------------- BREAKFAST ----------------
         if action == "breakfast":
             if meal.breakfast_scanned:
                 return Response({"error": "Breakfast already scanned"}, status=400)
@@ -448,21 +453,18 @@ class MealActionAPIView(APIView):
             meal.breakfast_scanned = True
             if meal.breakfast is None:
                 meal.breakfast = True
-
             meal.save()
             return Response({"message": "Breakfast marked done"})
 
-        # --------------------------------------------------------
-        # CASE 2: LUNCH BUTTON
-        # --------------------------------------------------------
+        # ---------------- LUNCH ----------------
         if action == "lunch":
-            # Morning time (breakfast window) → decision
+            # Decision allowed during breakfast
             if now_window == "breakfast":
                 meal.lunch = False
                 meal.save()
                 return Response({"message": "Lunch opted NO (count reduced)"})
 
-            # Afternoon time → scan
+            # Scan allowed during lunch
             if now_window == "lunch":
                 if meal.lunch is False:
                     return Response({"error": "Student opted NO for lunch"}, status=400)
@@ -475,19 +477,19 @@ class MealActionAPIView(APIView):
                 meal.save()
                 return Response({"message": "Lunch scan completed"})
 
-            return Response({"error": "Cannot update lunch at this time"}, status=403)
+            return Response({
+                "error": f"Lunch not allowed during {now_window} time"
+            }, status=403)
 
-        # --------------------------------------------------------
-        # CASE 3: DINNER BUTTON
-        # --------------------------------------------------------
+        # ---------------- DINNER ----------------
         if action == "dinner":
-            # Morning time → dinner decision
+            # Decision allowed during breakfast
             if now_window == "breakfast":
                 meal.dinner = False
                 meal.save()
                 return Response({"message": "Dinner opted NO (count reduced)"})
 
-            # Evening → scan dinner
+            # Scan during dinner
             if now_window == "dinner":
                 if meal.dinner is False:
                     return Response({"error": "Student opted NO for dinner"}, status=400)
@@ -500,7 +502,9 @@ class MealActionAPIView(APIView):
                 meal.save()
                 return Response({"message": "Dinner scan completed"})
 
-            return Response({"error": "Cannot update dinner at this time"}, status=403)
+            return Response({
+                "error": f"Dinner not allowed during {now_window} time"
+            }, status=403)
 
 # -------------------------
 # STEP: Kitchen counts API
