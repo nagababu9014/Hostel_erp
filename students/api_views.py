@@ -456,14 +456,21 @@ class MealActionAPIView(APIView):
 
         # ---------------- BREAKFAST ----------------
         if action == "breakfast":
+            if now_window != "breakfast":
+                return Response({
+                    "error": f"Breakfast not allowed during {now_window} time"
+                }, status=403)
+
             if meal.breakfast_scanned:
                 return Response({"error": "Breakfast already scanned"}, status=400)
 
             meal.breakfast_scanned = True
             if meal.breakfast is None:
                 meal.breakfast = True
+
             meal.save()
             return Response({"message": "Breakfast marked done"})
+
 
         # ---------------- LUNCH ----------------
         if action == "lunch":
@@ -514,7 +521,37 @@ class MealActionAPIView(APIView):
             return Response({
                 "error": f"Dinner not allowed during {now_window} time"
             }, status=403)
+from datetime import timedelta
 
+class WardenMealStatsAPIView(APIView):
+    @role_required(['warden', 'owner'])
+    def get(self, request):
+
+        today = timezone.now().date()
+        yesterday = today - timedelta(days=1)
+
+        def get_stats(date):
+            return {
+                "date": str(date),
+                "breakfast_count": DailyMeal.objects.filter(
+                    date=date, breakfast_scanned=True
+                ).count(),
+
+                "lunch_count": DailyMeal.objects.filter(
+                    date=date, lunch_scanned=True
+                ).count(),
+
+                "dinner_count": DailyMeal.objects.filter(
+                    date=date, dinner_scanned=True
+                ).count(),
+            }
+
+        data = {
+            "today": get_stats(today),
+            "yesterday": get_stats(yesterday)
+        }
+
+        return Response(data)
 # -------------------------
 # STEP: Kitchen counts API
 # -------------------------
