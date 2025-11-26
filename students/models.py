@@ -61,6 +61,8 @@ class StaffRole(models.Model):
         ('accounts', 'Accounts'),
         ('warden', 'Warden'),
         ('kitchen', 'Kitchen'),
+        ('staff', 'Staff'),
+
     ]
 
     user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -93,3 +95,24 @@ class DailyMeal(models.Model):
 
     def __str__(self):
         return f"{self.student.student_name} - {self.date}"
+
+
+class Employee(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="employee_profile")
+
+    name = models.CharField(max_length=100)
+    address = models.TextField()
+    phone_number = models.CharField(max_length=15)
+
+    bank_account_number = models.CharField(max_length=30)
+    ifsc_code = models.CharField(max_length=20)
+    bank_name = models.CharField(max_length=100)
+
+    salary = models.DecimalField(max_digits=10, decimal_places=2)
+
+    date_of_joining = models.DateField(null=True, blank=True)  # OPTIONAL
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name

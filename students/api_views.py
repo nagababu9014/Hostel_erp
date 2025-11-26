@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
+from .models import StaffRole, Employee
 
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -570,4 +571,102 @@ class KitchenCountAPI(APIView):
             "breakfast_count": breakfast_count,
             "lunch_count": lunch_count,
             "dinner_count": dinner_count
+        })
+ 
+class OwnerDashboardAPI(APIView):
+    permission_classes = [IsAuthenticated]
+    @role_required(['owner'])
+    def get(self, request):
+        today = timezone.now().date()
+
+        # ---------------- STUDENTS ----------------
+        students_data = []
+        for student in Student.objects.all():
+            students_data.append({
+                "id": student.id,
+                "student_name": student.student_name,
+                "et_number": student.et_number,
+                "student_phone_number": student.student_phone_number,
+
+                "father_name": student.father_name,
+                "father_phone_number": student.father_phone_number,
+
+                "student_email": student.student_email,
+
+                "fees_paid": float(student.fees_paid),
+                "pending_fee": float(student.pending_fee),
+                "utr_number": student.utr_number,
+
+                "room_type": student.room_type,
+                "is_verified": student.is_verified,
+
+                "student_image": request.build_absolute_uri(student.student_image.url)
+                    if student.student_image else None,
+            })
+
+        # ---------------- STAFF ----------------
+        staff_data = []
+        for emp in Employee.objects.all():
+            staff_data.append({
+                "id": emp.id,
+                "name": emp.name,
+                "phone": emp.phone_number,
+                "address": emp.address,
+                "bank_name": emp.bank_name,
+                "ifsc": emp.ifsc_code,
+                "account_no": emp.bank_account_number,
+                "salary": float(emp.salary),
+                "date_of_joining": emp.date_of_joining
+            })
+
+        # ---------------- 7 DAYS MEAL STATS ----------------
+        stats = []
+        for i in range(7):
+            day = today - timedelta(days=i)
+            stats.append({
+                "date": str(day),
+                "breakfast": DailyMeal.objects.filter(date=day, breakfast_scanned=True).count(),
+                "lunch": DailyMeal.objects.filter(date=day).exclude(lunch=False).count(),
+                "dinner": DailyMeal.objects.filter(date=day).exclude(dinner=False).count(),
+            })
+
+        return Response({
+            "students": students_data,
+            "staff": staff_data,
+            "meal_stats_last_7_days": stats[::-1]
+        })
+
+    
+class AddStaffAPI(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @role_required(['owner'])
+    def post(self, request):
+        data = request.data
+
+        user = User.objects.create_user(
+            username=data["username"],
+            password=data["password"]
+        )
+
+        employee = Employee.objects.create(
+            user=user,
+            name=data["name"],
+            address=data["address"],
+            phone_number=data["phone_number"],
+            bank_account_number=data["bank_account_number"],
+            ifsc_code=data["ifsc_code"],
+            bank_name=data["bank_name"],
+            salary=data["salary"],
+            date_of_joining=data.get("date_of_joining")
+        )
+
+        StaffRole.objects.create(
+            user=user,
+            role=data["role"]  # office, accounts, warden, kitchen
+        )
+
+        return Response({
+            "message": "Staff added successfully",
+            "employee_id": employee.id
         })

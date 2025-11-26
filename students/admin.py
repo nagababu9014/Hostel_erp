@@ -88,3 +88,47 @@ class DailyMealAdmin(admin.ModelAdmin):
 
     def dinner_scanned(self, obj):
         return obj.dinner
+from .models import Employee
+
+
+@admin.register(Employee)
+class EmployeeAdmin(admin.ModelAdmin):
+
+    list_display = (
+        "name",
+        "user",
+        "phone_number",
+        "bank_name",
+        "bank_account_number",
+        "ifsc_code",
+        "salary",
+        "date_of_joining",
+        "created_at",
+    )
+
+    search_fields = (
+        "name",
+        "phone_number",
+        "user__username",
+        "bank_account_number",
+    )
+
+    list_filter = (
+        "bank_name",
+        "date_of_joining",
+    )
+
+    fields = (
+        "user",
+        "name",
+        "address",
+        "phone_number",
+        "bank_name",
+        "bank_account_number",
+        "ifsc_code",
+        "salary",
+        "date_of_joining",
+        "created_at",
+    )
+
+    readonly_fields = ("created_at",)
