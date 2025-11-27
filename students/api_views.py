@@ -685,20 +685,23 @@ class TodayAttendanceAPIView(APIView):
         for meal in meals:
             student = meal.student
 
-            # ✅ PRESENT (minimal)
+            if not student:
+                continue
+
+            # ✅ PRESENT (Minimal data)
             if meal.breakfast_scanned or meal.lunch_scanned:
                 present.append({
                     "et_number": student.et_number,
                     "student_name": student.student_name,
                 })
 
-            # ❌ ABSENT (detailed)
+            # ❌ ABSENT (Detailed data)
             else:
                 absent.append({
                     "et_number": student.et_number,
                     "student_name": student.student_name,
-                    "mobile_number": student.mobile_number,
-                    "father_mobile": student.father_mobile_number,
+                    "mobile_number": student.student_phone_number,
+                    "father_mobile": student.father_phone_number,
                     "student_image": student.student_image.url if student.student_image else None,
                 })
 
