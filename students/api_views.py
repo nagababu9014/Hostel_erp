@@ -689,7 +689,7 @@ class TodayAttendanceAPIView(APIView):
                 continue
 
             # ✅ PRESENT (Minimal data)
-            if meal.breakfast_scanned or meal.lunch_scanned:
+            if meal.breakfast_scanned or meal.lunch_scanned or meal.manual_present:
                 present.append({
                     "et_number": student.et_number,
                     "student_name": student.student_name,
