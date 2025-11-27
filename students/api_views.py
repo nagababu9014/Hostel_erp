@@ -712,3 +712,28 @@ class TodayAttendanceAPIView(APIView):
             "present_students": present,
             "absent_students": absent
         })
+
+
+class MarkStudentPresentAPIView(APIView):
+    @role_required(['warden', 'owner'])
+    def post(self, request):
+        today = timezone.now().date()
+        et_number = request.data.get("et_number")
+
+        if not et_number:
+            return Response({"error": "ET number required"}, status=400)
+
+        try:
+            student = Student.objects.get(et_number=et_number)
+            meal = DailyMeal.objects.get(student=student, date=today)
+
+            meal.manual_present = True   # ✅ Only attendance override
+            meal.save()
+
+            return Response({
+                "message": "Student marked PRESENT manually (meal count unchanged)",
+                "student": student.student_name
+            })
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=404)

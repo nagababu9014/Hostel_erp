@@ -86,6 +86,7 @@ class DailyMeal(models.Model):
     breakfast_scanned = models.BooleanField(default=False)
     lunch_scanned = models.BooleanField(default=False)
     dinner_scanned = models.BooleanField(default=False)
+    manual_present = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
