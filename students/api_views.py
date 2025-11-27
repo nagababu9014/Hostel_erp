@@ -672,12 +672,11 @@ class AddStaffAPI(APIView):
         })
 
 
-
 class TodayAttendanceAPIView(APIView):
     @role_required(['warden', 'owner'])
     def get(self, request):
-        today = timezone.now().date()
 
+        today = timezone.now().date()
         meals = DailyMeal.objects.filter(date=today).select_related('student')
 
         present = []
@@ -686,25 +685,22 @@ class TodayAttendanceAPIView(APIView):
         for meal in meals:
             student = meal.student
 
-            # ✅ PRESENT DATA (Minimal)
-            present_data = {
-                "et_number": student.et_number,
-                "student_name": student.student_name,
-            }
-
-            # ❌ ABSENT DATA (Detailed)
-            absent_data = {
-                "et_number": student.et_number,
-                "student_name": student.student_name,
-                "mobile_number": student.student_phone_number,
-                "father_mobile": student.father_phone_number,
-                "photo": student.photo.url if student.photo else None
-            }
-
+            # ✅ PRESENT (minimal)
             if meal.breakfast_scanned or meal.lunch_scanned:
-                present.append(present_data)
+                present.append({
+                    "et_number": student.et_number,
+                    "student_name": student.student_name,
+                })
+
+            # ❌ ABSENT (detailed)
             else:
-                absent.append(absent_data)
+                absent.append({
+                    "et_number": student.et_number,
+                    "student_name": student.student_name,
+                    "mobile_number": student.mobile_number,
+                    "father_mobile": student.father_mobile_number,
+                    "student_image": student.student_image.url if student.student_image else None,
+                })
 
         return Response({
             "date": str(today),
