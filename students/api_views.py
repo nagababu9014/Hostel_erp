@@ -302,7 +302,7 @@ from datetime import time as dtime
 MEAL_RANGES = getattr(settings, "MEAL_TIME_RANGES", {
     "breakfast": {"start": dtime(7, 0), "end": dtime(12, 30)},
     "lunch": {"start": dtime(14, 0), "end": dtime(15, 0)},
-    "dinner": {"start": dtime(19, 0), "end": dtime(21, 0)},
+    "dinner": {"start": dtime(19, 0), "end": dtime(23, 0)},
 })
 
 def is_within_meal_window(meal_type, now=None):

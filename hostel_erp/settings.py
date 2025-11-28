@@ -213,7 +213,7 @@ from datetime import time as dtime
 MEAL_TIME_RANGES = {
     "breakfast": {"start": dtime(7,0), "end": dtime(14,0)},
     "lunch":     {"start": dtime(14,0), "end": dtime(15,0)},
-    "dinner":    {"start": dtime(18,0), "end": dtime(21,0)},
+    "dinner":    {"start": dtime(18,0), "end": dtime(23,0)},
 }
 from datetime import timedelta
 
